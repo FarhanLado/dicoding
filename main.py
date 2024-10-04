@@ -2,10 +2,12 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler  # Untuk clustering
+from sklearn.cluster import KMeans  # Untuk clustering
 from pathlib import Path
 
 # Tentukan jalur file dataset lokal
-DATA_FILENAME = Path(__file__).parent / 'data/day.csv'
+DATA_FILENAME = Path(__file__).parent / 'day.csv'
 
 # Judul dan pengantar
 st.title('Analisis Data Bike Sharing')
@@ -85,7 +87,7 @@ try:
         **Insight:** 
         - Rata-rata Penyewaan Sepeda per Hari:
             * Grafik kedua menunjukkan jumlah penyewaan sepeda per hari sepanjang tahun, yang menunjukkan adanya tren musiman yang jelas. Penyewaan sepeda meningkat dari awal tahun, mencapai puncaknya pada musim panas (sekitar Juli-Agustus), dan menurun tajam menjelang musim dingin.
-            * Rata-rata penyewaan sepeda harian selama periode puncak berkisar antara 4000-6000 sepeda per hari, dengan variasi harian yang cukup besar. Ini mengindikasikan adanya pengaruh cuaca atau musim terhadap permintaan penyewaan sepeda.nerja utama untuk pertumbuhan bisnis.
+            * Rata-rata penyewaan sepeda harian selama periode puncak berkisar antara 4000-6000 sepeda per hari, dengan variasi harian yang cukup besar. Ini mengindikasikan adanya pengaruh cuaca atau musim terhadap permintaan penyewaan sepeda.
         """)
 
     # 3. Dampak kecepatan angin dan suhu
@@ -110,6 +112,58 @@ try:
             * Kecepatan Angin: Berdasarkan scatter plot dan nilai korelasi -0.23, ada hubungan negatif yang lemah antara kecepatan angin dan penyewaan sepeda. Ketika kecepatan angin meningkat, jumlah penyewaan cenderung menurun. Namun, karena nilai korelasi ini rendah, dampaknya tidak terlalu signifikan. Ini bisa disebabkan oleh kenyamanan bersepeda yang menurun saat angin lebih kencang, meskipun tidak selalu menjadi faktor yang menghalangi.
             * Suhu: Scatter plot menunjukkan adanya korelasi positif yang kuat antara suhu dan penyewaan sepeda, didukung dengan nilai korelasi 0.63. Saat suhu meningkat, jumlah penyewaan sepeda juga meningkat secara signifikan. Ini menunjukkan bahwa orang lebih suka bersepeda ketika cuaca lebih hangat. Pada suhu optimal, jumlah penyewaan bisa mencapai 6000-8000 sepeda per hari.
         """)
+
+    # Analisis lanjutan dampak kecepatan angin dan suhu pada peminjaman
+    st.header('Analisis Lanjutan Dampak Kecepatan Angin dan Suhu pada Peminjaman')
+    
+    # Fitur yang akan digunakan dalam clustering
+    features = data[['windspeed', 'temp']]
+
+    # Normalisasi fitur sebelum clustering
+    scaler = StandardScaler()
+    scaled_features = scaler.fit_transform(features)
+
+    # Terapkan K-Means dengan 3 cluster (bisa diubah sesuai analisis)
+    kmeans = KMeans(n_clusters=3, random_state=42)
+    data['cluster'] = kmeans.fit_predict(scaled_features)
+
+    # Visualisasi cluster
+    st.subheader('Visualisasi Clustering')
+    plt.figure(figsize=(12, 6))
+    sns.scatterplot(x='windspeed', y='temp', hue='cluster', data=data, palette='Set1', alpha=0.6)
+    plt.title('Clustering berdasarkan Kecepatan Angin dan Suhu')
+    plt.xlabel('Kecepatan Angin (m/s)')
+    plt.ylabel('Suhu (dinormalisasi)')
+    plt.grid()
+    st.pyplot(plt)
+
+    # Analisis jumlah penyewaan sepeda berdasarkan cluster
+    st.subheader('Analisis Penyewaan Sepeda berdasarkan Cluster Cuaca')
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(x='cluster', y='cnt', data=data)
+    plt.title('Jumlah Penyewaan Sepeda berdasarkan Cluster Cuaca')
+    plt.xlabel('Cluster Cuaca')
+    plt.ylabel('Jumlah Penyewaan Sepeda')
+    plt.grid()
+    st.pyplot(plt)
+
+    st.write("""
+       **Insight**
+1. **Cluster 0 (Angin Tinggi, Suhu Sedang):**
+   - Di cluster ini, kecepatan angin cenderung tinggi (sekitar 0.2 - 0.5 m/s) dengan suhu sedang (0.4 - 0.6).
+   - Penyewaan sepeda di cluster ini memiliki variasi yang cukup besar, dengan jumlah penyewaan sekitar 2000 hingga 8000.
+   - **Kesimpulan**: Meskipun angin lebih kuat di cluster ini, jumlah penyewaan sepeda tetap bervariasi. Hal ini menunjukkan bahwa pengguna sepeda mungkin tidak terlalu terpengaruh oleh angin sedang hingga tinggi selama suhu masih berada di tingkat yang sedang.
+
+2. **Cluster 1 (Angin Sedang, Suhu Lebih Hangat):**
+   - Cluster ini mencakup kecepatan angin sedang (0.1 - 0.3 m/s) dan suhu yang lebih hangat (di atas 0.6).
+   - Penyewaan sepeda di cluster ini cenderung lebih tinggi dengan median lebih dari 6000.
+   - **Kesimpulan**: Cluster ini menunjukkan bahwa kondisi cuaca dengan suhu hangat dan angin sedang merupakan kondisi optimal untuk penyewaan sepeda. Penyewaan sepeda lebih banyak terjadi dalam kondisi ini, yang mengindikasikan bahwa pengguna lebih suka menggunakan sepeda ketika cuaca lebih nyaman.
+
+3. **Cluster 2 (Angin Rendah, Suhu Lebih Dingin):**
+   - Cluster ini memiliki kecepatan angin yang rendah (0.0 - 0.2 m/s) dan suhu yang lebih rendah (sekitar 0.1 - 0.4).
+   - Penyewaan sepeda di cluster ini relatif lebih rendah dibandingkan dengan cluster lainnya, dengan median di bawah 4000.
+   - **Kesimpulan**: Kondisi dengan angin yang rendah namun suhu lebih dingin cenderung menghasilkan lebih sedikit penyewaan sepeda. Pengguna tampaknya menghindari bersepeda ketika suhu lebih dingin meskipun angin tidak kencang.
+    """)
 
     # Kesimpulan
     st.header('Kesimpulan')
