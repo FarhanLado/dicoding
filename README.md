@@ -1,4 +1,4 @@
-# 🎈 Blank app template
+# Analisis Data Bike Sharing
 
 A simple Streamlit app template for you to modify!
 
